@@ -5,6 +5,7 @@ import com.illumino.domain.LookupTableData;
 import com.opencsv.bean.CsvToBeanBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -24,9 +25,17 @@ public class FlowLogDataParser {
     private static final String lookupTableFileName = "lookupTable.csv";
     public static void main(String[] args)  {
         //read flow log data from csv
-        List<FlowLogData> flowLogDataList= readCsvData(flowLogfileName, FlowLogData.class);
+        long start = System.currentTimeMillis();
+       // List<FlowLogData> flowLogDataList= readCsvData(flowLogfileName, FlowLogData.class);
+        System.out.println("timeTaken to read using opencsv="+ (System.currentTimeMillis()-start));
+
+        start = System.currentTimeMillis();
+        List<FlowLogData> flowLogDataList =readFlowLogCsvUsingBufferedReader();
+        System.out.println("timeTaken to readBuffered ="+ (System.currentTimeMillis()-start));
+
         //read lookup table data from csv
-        List<LookupTableData> lookupTableDataList= readCsvData(lookupTableFileName, LookupTableData.class);
+       // List<LookupTableData> lookupTableDataList= readCsvData(lookupTableFileName, LookupTableData.class);
+        List<LookupTableData> lookupTableDataList= readLookupTableCsvUsingBufferedReader();
 
         //map to hold tags based on port and protocol pair
         Map<Pair<Integer, String>, String> tagLookupMap = new HashMap<>();
@@ -42,12 +51,14 @@ public class FlowLogDataParser {
         //map to hold tag counts
         Map<String, Integer> tagCountMap = new HashMap<>();
         //populate both the maps
+         start = System.currentTimeMillis();
         flowLogDataList.forEach(flowLogData -> {
             Pair<Integer, String> pair = Pair.of(flowLogData.getDstPort(), flowLogData.getProtocol()!=null ?  flowLogData.getProtocol().toLowerCase(): "");
             String tag = tagLookupMap.get(pair);
             tagCountMap.put(tag, tagCountMap.getOrDefault(tag,0)+1);
             portProtocolCountMap.put(pair, portProtocolCountMap.getOrDefault(pair,0)+1);
         });
+        System.out.println("timeTaken to process ="+ (System.currentTimeMillis()-start));
 
         //assuming both outputs needs to written into separate csvs
         writeTagsCountFile(tagCountMap);
@@ -55,7 +66,7 @@ public class FlowLogDataParser {
     }
 
     /**
-     * Generic method to read csv and generate List of java objects
+     * Generic method to read csv using opencsv api and generate List of java objects
      * @param fileName in class path
      * @param T Type of the object
      * @return
@@ -73,6 +84,59 @@ public class FlowLogDataParser {
             //add logs or throw exception based on use case
         }
         return flowLogDataList;
+    }
+
+    /**
+     * Reads flowlog csv using Buffered Reader
+     * reads only required fields i.e dstport and protocol
+     * @return
+     */
+    private static List<FlowLogData> readFlowLogCsvUsingBufferedReader(){
+        String line;
+        List<FlowLogData> flowLogDataList= new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(FlowLogDataParser.class.getClassLoader().getResource(flowLogfileName).getFile()))) {
+            System.out.println("Header " + br.readLine());
+            while ((line = br.readLine()) != null) {
+
+                String[] list = line.split(",");
+                FlowLogData flowLogData= new FlowLogData();
+                flowLogData.setDstPort(Integer.valueOf(list[10]));//dstPort index in csv
+                flowLogData.setProtocol(list[13]);//protocol index in csv
+                flowLogDataList.add(flowLogData);
+            }
+        }catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return flowLogDataList;
+    }
+
+    /**
+     * Reads LookupTableData csv using Buffered Reader
+     * reads only required fields i.e dstport, protocol and tag
+     * @return
+     */
+    private static List<LookupTableData> readLookupTableCsvUsingBufferedReader(){
+        String line;
+        List<LookupTableData> lookupTableDataList= new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(FlowLogDataParser.class.getClassLoader().getResource(lookupTableFileName).getFile()))) {
+            System.out.println("Header " + br.readLine());
+            while ((line = br.readLine()) != null) {
+
+                String[] list = line.split(",");
+                LookupTableData lookupTableData= new LookupTableData();
+                lookupTableData.setDstPort(Integer.valueOf(list[0]));//dstPort index in csv
+                lookupTableData.setProtocol(list[1]);//protocol index in csv
+                lookupTableData.setTag(list[2]);// tag index in csv
+                lookupTableDataList.add(lookupTableData);
+            }
+        }catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return lookupTableDataList;
     }
 
     /**
