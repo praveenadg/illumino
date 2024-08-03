@@ -14,6 +14,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * This is a plain java class which read two csv files containing "flowlog data" and "lookup table data" and
@@ -26,7 +29,7 @@ public class FlowLogDataParser {
     public static void main(String[] args)  {
         //read flow log data from csv
         long start = System.currentTimeMillis();
-       // List<FlowLogData> flowLogDataList= readCsvData(flowLogfileName, FlowLogData.class);
+        //List<FlowLogData> flowLogDataList= readCsvData(flowLogfileName, FlowLogData.class);
         System.out.println("timeTaken to read using opencsv="+ (System.currentTimeMillis()-start));
 
         start = System.currentTimeMillis();
@@ -52,7 +55,15 @@ public class FlowLogDataParser {
         Map<String, Integer> tagCountMap = new HashMap<>();
         //populate both the maps
          start = System.currentTimeMillis();
+         //Experimented with ExecutorService but it is taking 50% more time than serial processing in my machine
+      //  ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2);
         flowLogDataList.forEach(flowLogData -> {
+        /*    es.submit(() -> {
+                Pair<Integer, String> pair = Pair.of(flowLogData.getDstPort(), flowLogData.getProtocol()!=null ?  flowLogData.getProtocol().toLowerCase(): "");
+                String tag = tagLookupMap.get(pair);
+                tagCountMap.put(tag, tagCountMap.getOrDefault(tag,0)+1);
+                portProtocolCountMap.put(pair, portProtocolCountMap.getOrDefault(pair,0)+1);
+            }); */
             Pair<Integer, String> pair = Pair.of(flowLogData.getDstPort(), flowLogData.getProtocol()!=null ?  flowLogData.getProtocol().toLowerCase(): "");
             String tag = tagLookupMap.get(pair);
             tagCountMap.put(tag, tagCountMap.getOrDefault(tag,0)+1);
