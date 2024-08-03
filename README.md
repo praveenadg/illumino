@@ -14,3 +14,6 @@ to test with a larger flow data file uncomment this [line](https://github.com/pr
 # Refereces
 * [flow-logs-records-examples](https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-records-examples.html)
 * [opencsv](https://javadoc.io/doc/com.opencsv/opencsv/5.7.1/index.html)
+# Notes
+I experimented reading csv using both opencsv apis and built in BufferedReader and found that reading only required columns using BufferedReader is 100x(290ms vs 24885ms) faster than reading using opencsv.
+I have sysouts and methods for both the reads in the code for validation.
