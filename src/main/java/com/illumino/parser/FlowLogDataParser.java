@@ -14,6 +14,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * This is a plain java class which read two csv files containing "flowlog data" and "lookup table data" and
+ * based on data generates two csv files one with tag counts and other with port protocol counts.
+ */
 public class FlowLogDataParser {
 
     private static final String flowLogfileName = "flowlog_small.csv";//"flowlog.csv"//to test with larger data use flowlog.csv
@@ -29,7 +33,7 @@ public class FlowLogDataParser {
         //map to hold count of port and protocol combination
         Map<Pair<Integer, String>, Integer> portProtocolCountMap = new HashMap<>();
 
-        //read once and populate both the maps
+        //read once and populate the map
         lookupTableDataList.forEach(lookupTableData -> {
             Pair<Integer, String> pair = Pair.of(lookupTableData.getDstPort(),lookupTableData.getProtocol()!=null?  lookupTableData.getProtocol().toLowerCase(): "");
             tagLookupMap.put(pair, lookupTableData.getTag());
@@ -37,7 +41,7 @@ public class FlowLogDataParser {
 
         //map to hold tag counts
         Map<String, Integer> tagCountMap = new HashMap<>();
-
+        //populate both the maps
         flowLogDataList.forEach(flowLogData -> {
             Pair<Integer, String> pair = Pair.of(flowLogData.getDstPort(), flowLogData.getProtocol()!=null ?  flowLogData.getProtocol().toLowerCase(): "");
             String tag = tagLookupMap.get(pair);
