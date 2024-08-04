@@ -14,9 +14,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * This is a plain java class which read two csv files containing "flowlog data" and "lookup table data" and
@@ -24,21 +25,17 @@ import java.util.concurrent.Executors;
  */
 public class FlowLogDataParser {
 
-    private static final String flowLogfileName = "flowlog_small.csv";//"flowlog.csv"//to test with larger data use flowlog.csv
-    private static final String lookupTableFileName = "lookupTable.csv";
-    public static void main(String[] args)  {
-        //read flow log data from csv
-        long start = System.currentTimeMillis();
-        //List<FlowLogData> flowLogDataList= readCsvData(flowLogfileName, FlowLogData.class);
-        System.out.println("timeTaken to read using opencsv="+ (System.currentTimeMillis()-start));
+    private static final String flowLogfileName = "flowlog.csv";//"flowlog_small.csv"//to test with larger data use flowlog.csv
+    private static final String lookupTableFileName = "lookupTable.csv"; //"lookupTable_small.csv"//to test with larger data use lookupTable.csv
 
-        start = System.currentTimeMillis();
-        List<FlowLogData> flowLogDataList =readFlowLogCsvUsingBufferedReader();
-        System.out.println("timeTaken to readBuffered ="+ (System.currentTimeMillis()-start));
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        ExecutorService es = Executors.newFixedThreadPool(2);
+        //read flow log data from csv
+        long begin = System.currentTimeMillis();
+        Future<List<FlowLogData>> flowLogDataList = es.submit(()->  readFlowLogCsvUsingBufferedReader());
 
         //read lookup table data from csv
-       // List<LookupTableData> lookupTableDataList= readCsvData(lookupTableFileName, LookupTableData.class);
-        List<LookupTableData> lookupTableDataList= readLookupTableCsvUsingBufferedReader();
+        Future<List<LookupTableData>> lookupTableDataList = es.submit(()->readLookupTableCsvUsingBufferedReader());
 
         //map to hold tags based on port and protocol pair
         Map<Pair<Integer, String>, String> tagLookupMap = new HashMap<>();
@@ -46,7 +43,7 @@ public class FlowLogDataParser {
         Map<Pair<Integer, String>, Integer> portProtocolCountMap = new HashMap<>();
 
         //read once and populate the map
-        lookupTableDataList.forEach(lookupTableData -> {
+        lookupTableDataList.get().forEach(lookupTableData -> {
             Pair<Integer, String> pair = Pair.of(lookupTableData.getDstPort(),lookupTableData.getProtocol()!=null?  lookupTableData.getProtocol().toLowerCase(): "");
             tagLookupMap.put(pair, lookupTableData.getTag());
         });
@@ -54,26 +51,16 @@ public class FlowLogDataParser {
         //map to hold tag counts
         Map<String, Integer> tagCountMap = new HashMap<>();
         //populate both the maps
-         start = System.currentTimeMillis();
-         //Experimented with ExecutorService but it is taking 50% more time than serial processing in my machine
-      //  ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2);
-        flowLogDataList.forEach(flowLogData -> {
-        /*    es.submit(() -> {
-                Pair<Integer, String> pair = Pair.of(flowLogData.getDstPort(), flowLogData.getProtocol()!=null ?  flowLogData.getProtocol().toLowerCase(): "");
-                String tag = tagLookupMap.get(pair);
-                tagCountMap.put(tag, tagCountMap.getOrDefault(tag,0)+1);
-                portProtocolCountMap.put(pair, portProtocolCountMap.getOrDefault(pair,0)+1);
-            }); */
+        flowLogDataList.get().forEach(flowLogData -> {
             Pair<Integer, String> pair = Pair.of(flowLogData.getDstPort(), flowLogData.getProtocol()!=null ?  flowLogData.getProtocol().toLowerCase(): "");
             String tag = tagLookupMap.get(pair);
             tagCountMap.put(tag, tagCountMap.getOrDefault(tag,0)+1);
             portProtocolCountMap.put(pair, portProtocolCountMap.getOrDefault(pair,0)+1);
         });
-        System.out.println("timeTaken to process ="+ (System.currentTimeMillis()-start));
-
         //assuming both outputs needs to written into separate csvs
         writeTagsCountFile(tagCountMap);
         writePortProtocolCountFile(portProtocolCountMap);
+        System.out.println("timeTaken to complete ="+ (System.currentTimeMillis()-begin));
     }
 
     /**
@@ -118,7 +105,7 @@ public class FlowLogDataParser {
         }catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+
         }
         return flowLogDataList;
     }
