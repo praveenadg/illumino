@@ -7,6 +7,7 @@ to test with a larger flow data file uncomment this [line](https://github.com/pr
 # Assumptions
 * This could have been a simple java project but assuming there will be more enhancements created it as a spring-boot project.
 * The input files are placed under resources folder.
+* Input contains no sensitive data.
 * The output will be generated  into seperate csvs named **tag_counts.csv** and **port_protocol_count.csv** in the target directory.
 * Uses Java-11
 * Given the timeframe of 2 hours did not add unit-tests.
