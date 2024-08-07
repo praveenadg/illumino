@@ -10,7 +10,7 @@ to test with a larger flow data file uncomment this [line](https://github.com/pr
 * Input contains no sensitive data.
 * The output will be generated  into seperate csvs named **tag_counts.csv** and **port_protocol_count.csv** in the target directory.
 * Uses Java-11
-* Given the timeframe of 2 hours did not add unit-tests.
+* Given the timeframe of 2 hours did not add unit-tests, validations and error handling.
 
 # Refereces
 * [flow-logs-records-examples](https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-records-examples.html)
